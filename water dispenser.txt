@@ -1,0 +1,89 @@
+// -------------------- Pin Definitions --------------------
+#define TRIGGER_PIN 5     // Trigger pin for ultrasonic sensor
+#define ECHO_PIN 4        // Echo pin for ultrasonic sensor
+#define RELAY_PIN 6       // Relay pin connected to water motor via relay module
+
+// -------------------- Variables --------------------
+float duration = 0;       // Time taken for the echo to return
+float distance = 0;       // Distance in cm calculated from echo time
+int detectionCounter = 0; // Counter to ensure stable object detection
+
+// -------------------- Constants --------------------
+const int detectionThreshold = 5; // Number of consistent detections before activating motor
+
+// -------------------- Setup Function --------------------
+void setup()
+{
+    Serial.begin(9600);                     // Start serial communication for debugging
+    pinMode(TRIGGER_PIN, OUTPUT);           // Set trigger pin as output
+    pinMode(ECHO_PIN, INPUT);               // Set echo pin as input
+    pinMode(RELAY_PIN, OUTPUT);             // Set relay pin as output
+
+    digitalWrite(RELAY_PIN, HIGH);          // Ensure relay is OFF initially (motor off)
+    delay(2000);                            // Delay for system stabilization
+}
+
+// -------------------- Main Loop --------------------
+void loop()
+{
+    measure_distance();                     // Call function to measure distance
+
+    if (distance < 5)                       // If object (hand/cup) is detected within 5 cm
+    {
+        detectionCounter++;                 // Increment detection counter
+
+        if (detectionCounter >= detectionThreshold) // If object detected consistently
+        {
+            digitalWrite(RELAY_PIN, LOW);   // Turn ON relay (active LOW), water dispenses
+        }
+    }
+    else
+    {
+        detectionCounter = 0;               // Reset detection counter if object not present
+        digitalWrite(RELAY_PIN, HIGH);      // Turn OFF relay, stop water
+    }
+
+    delay(100); // Debounce delay to avoid false triggers
+}
+
+// -------------------- Distance Measurement Function --------------------
+void measure_distance()
+{
+    digitalWrite(TRIGGER_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIGGER_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIGGER_PIN, LOW);
+
+    duration = pulseIn(ECHO_PIN, HIGH);     // Time for pulse to return
+    distance = (duration * 0.0343) / 2;     // Convert time to distance in cm
+
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" cm");
+}
+
+// -------------------- Future Advancements --------------------
+/*
+1. Timed Dispensing:
+   - Add a timer to limit water flow to a fixed duration (e.g., 5 seconds) after activation.
+   - Use millis() for non-blocking timing.
+
+2. LED Indicators:
+   - Use LEDs to show system status (Ready, Dispensing, Error).
+
+3. Water Level Monitoring:
+   - Add a second ultrasonic or float sensor to check if the water tank is low or empty.
+
+4. LCD or OLED Display:
+   - Display messages such as "Place Hand", "Dispensing", "Refill Tank".
+
+5. Temperature-Based Control:
+   - Add a temperature sensor to ensure water is within a safe temperature range before dispensing.
+
+6. Power Saving:
+   - Use PIR sensor for motion detection and put Arduino into sleep mode when idle.
+
+7. IoT Integration:
+   - Use ESP8266/ESP32 to send usage stats or receive remote commands for automation.
+*/
